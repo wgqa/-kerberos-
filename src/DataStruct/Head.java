@@ -9,7 +9,7 @@ public class Head {
     private String existSessionKey;  //是否存在sessionKey
     private String existClientID;    //是否存在请求方ID
     private String existRequstID;   //是否存在被请求方ID
-    private String existTimeStamp;        //是否存在时间戳
+    private String existTS;        //是否存在时间戳
     private String existLifeTime;  //  是否存在生存期限
     private String existTicket;    //是否存在票据
     private String existAuthenticator;   //是否存在认证
@@ -28,14 +28,14 @@ public class Head {
     //这种构造函数叫啥来着
 
 
-    public Head(String destID, String sourceID, String existLogin, String existSessionKey, String existClientID, String existRequstID, String existTimeStamp, String existLifeTime, String existTicket, String existAuthenticator, String securityCode, String expend) {
+    public Head(String destID, String sourceID, String existLogin, String existSessionKey, String existClientID, String existRequstID, String existTS, String existLifeTime, String existTicket, String existAuthenticator, String securityCode, String expend) {
         this.destID = destID;
         this.sourceID = sourceID;
         this.existLogin = existLogin;
         this.existSessionKey = existSessionKey;
         this.existClientID = existClientID;
         this.existRequstID = existRequstID;
-        this.existTimeStamp = existTimeStamp;
+        this.existTS = existTS;
         this.existLifeTime = existLifeTime;
         this.existTicket = existTicket;
         this.existAuthenticator = existAuthenticator;
@@ -50,12 +50,12 @@ public class Head {
         existSessionKey = "0";
         existClientID = "0";
         existRequstID = "0";
-        existTimeStamp = "0";
+        existTS = "0";
         existLifeTime = "0";
         existTicket = "0";
         existAuthenticator = "0";
         securityCode = zero(128);
-        expend = "0000000000000000";
+        expend = zero(16);
     }
 
     @Override
@@ -67,7 +67,7 @@ public class Head {
                 ", existSessionKey='" + existSessionKey + '\'' +
                 ", existClientID='" + existClientID + '\'' +
                 ", existRequstID='" + existRequstID + '\'' +
-                ", existTimeStamp='" + existTimeStamp + '\'' +
+                ", existTS='" + existTS + '\'' +
                 ", existLifeTime='" + existLifeTime + '\'' +
                 ", existTicket='" + existTicket + '\'' +
                 ", existAuthenticator='" + existAuthenticator + '\'' +
@@ -79,7 +79,7 @@ public class Head {
 
 
     public String headOutput() {
-        return destID + sourceID + existLogin + existSessionKey + existClientID + existRequstID + existTimeStamp + existLifeTime
+        return destID + sourceID + existLogin + existSessionKey + existClientID + existRequstID + existTS + existLifeTime
                 + existTicket + existAuthenticator+securityCode+expend;
     }
 
@@ -107,8 +107,8 @@ public class Head {
         this.existRequstID = existRequstID;
     }
 
-    public void setExistTimeStamp(String existTS) {
-        this.existTimeStamp = existTimeStamp;
+    public void setExistTS(String existTS) {
+        this.existTS = existTS;
     }
 
     public void setExistLifeTime(String existLifeTime) {
@@ -155,8 +155,8 @@ public class Head {
         return existRequstID;
     }
 
-    public String getExistTimeStamp() {
-        return existTimeStamp;
+    public String getExistTS() {
+        return existTS;
     }
 
     public String getExistLifeTime() {
