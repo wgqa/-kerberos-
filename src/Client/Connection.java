@@ -7,6 +7,7 @@ package Client;
 //三次建立socket连接的过程中，仅有IP和端口号不同吧应该？其他工作由通讯接受的报文的不同来区别
 
 
+import Client.UI.LIBRARY;
 import DataStruct.Packet;
 
 import java.io.*;
@@ -19,14 +20,20 @@ import java.io.*;
  * */
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 
 import static Client.Client.*;
 
 public class Connection {
+    public static  String messageSendUnencrypted;
+    public static  String messageSendEncrypted;
+    public static  String messageReceiveEncrypted;
+    public static  String messageReceiveDecrypted;
 
     public static void main(String args[]) throws Exception {
-        Packet p= new Packet();
+        Packet p = new Packet();
 
 //        connectToAS();
 //
@@ -36,7 +43,7 @@ public class Connection {
     }
 
     //通用收发工具
-    public static  boolean send(String host, int port, String message){
+    public static boolean send(String host, int port, String message) {
         try {
 
             // 与服务端建立连接
@@ -44,7 +51,6 @@ public class Connection {
 
             // 建立连接后获得输出流
             OutputStream outputStream = socket.getOutputStream();
-
 
 
             outputStream.write(message.getBytes("UTF-8"));
@@ -61,26 +67,32 @@ public class Connection {
         return true;
     }
 
-    public static String receive(Socket socket){
+    public static String receive(Socket socket) {
         return null;
-    };
+    }
 
-    public static boolean connectToAS(String message, String userName){
+    ;
+
+    public static Packet connectToAS(String clientID ) {
+        Packet  packetFromAS = new Packet();
         try {
             // 要连接的服务端IP地址和端口
             String host = ASIP;
             int port = 1233;
             // 与服务端建立连接
             Socket socket = new Socket("192.168.43.233", port);
-           // Socket socket = new Socket(host, port);
+            // Socket socket = new Socket(host, port);
             // 建立连接后获得输出流
             OutputStream outputStream = socket.getOutputStream();
 
 
-            Packet packetToAS = clientToAS(userName, TGSID);
+            Packet packetToAS = clientToAS(clientID, TGSID);
             //String message = packetToAS.toString()+"\n"+Client.packetToBinary(packetToAS);
-            message =Client.packetToBinary(packetToAS);
-            socket.getOutputStream().write(message.getBytes("UTF-8"));
+            System.out.println("发送的packet为"+packetToAS.toString());
+            //message =Client.packetToBinary(packetToAS);
+            messageSendUnencrypted = packetToAS.getHead().headOutput() + packetToAS.packageOutput();
+            System.out.println("发送的报文为"+messageSendUnencrypted);
+            socket.getOutputStream().write(messageSendUnencrypted.getBytes("UTF-8"));
 
             //通过shutdownOutput高速服务器已经发送完数据，后续只能接受数据
             socket.shutdownOutput();
@@ -91,26 +103,66 @@ public class Connection {
             InputStream inputStream = socket.getInputStream();
             byte[] bytes = new byte[1024];
             int len;
-            StringBuilder sb = new StringBuilder();
+            StringBuilder stringBuilder = new StringBuilder();
             while ((len = inputStream.read(bytes)) != -1) {
                 //注意指定编码格式，发送方和接收方一定要统一，建议使用UTF-8
-                sb.append(new String(bytes, 0, len,"UTF-8"));
+                stringBuilder.append(new String(bytes, 0, len, "UTF-8"));
             }
-            System.out.println("get message from server: " + sb);  // 这里后期要改成显示在客户端上
-
-            // tostring方法用来展示在屏幕上
-            //发送的包是 packetToBinary
-
+            System.out.println("收到的包"+stringBuilder.toString());
+            if(stringBuilder.toString().equals("")){
+                System.out.println("收到的包为空！");
+            }
+            packetFromAS = packetAnalyse(stringBuilder.toString());
+            // 这里是对的 System.out.println("packetFromAS"+packetFromAS.toString());
             inputStream.close();
             outputStream.close();
             socket.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return packetFromAS;
+    }
+
+    public static boolean connectToService(String verifyCode,int port){
+        try {
+            // 要连接的服务端IP地址和端口
+            String host = ServerIP;
+            // 与服务端建立连接
+            Socket socket = new Socket(host, port);
+            // 建立连接后获得输出流
+            OutputStream outputStream = socket.getOutputStream();
+            socket.getOutputStream().write(verifyCode.getBytes("UTF-8"));
+
+
+            socket.shutdownOutput();
+
+            InputStream inputStream = socket.getInputStream();
+            byte[] bytes = new byte[1024];
+            int len;
+            StringBuilder stringBuilder = new StringBuilder();
+            while ((len = inputStream.read(bytes)) != -1) {
+                //注意指定编码格式，发送方和接收方一定要统一，建议使用UTF-8
+                stringBuilder.append(new String(bytes, 0, len, "UTF-8"));
+            }
+            System.out.println("从Service收到的内容为: " + stringBuilder);
+
+            inputStream.close();
+            outputStream.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
         return true;
     }
-
-    public static boolean connectToTGS(String message,Packet packetFromAS){
+    public static Packet connectToTGS(Packet packetFromAS ) {
+        Packet packetFromTGS = new Packet();
+        InetAddress address = null;
+        try {
+            address = InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        String clientIP = address.getHostAddress();
         try {
             // 要连接的服务端IP地址和端口
             String host = TGSIP;
@@ -120,11 +172,13 @@ public class Connection {
             // 建立连接后获得输出流
             OutputStream outputStream = socket.getOutputStream();
 
+            System.out.println("从AS中获取的ticket为"+packetFromAS.getTicket().toString());
+            Packet packetToTGS = clientToTGS(clientID, "SERV", packetFromAS.getTicket(), Client.generateAuth(clientID, ipToBinary(address), packetFromAS.getSessionKey()));
 
-            Packet packetToTGS = clientToTGS(clientID, SERVERID,packetFromAS.getTicket(),Client.generateAuth(clientID,clientIP,packetFromAS.getSessionKey()));
-            message = packetToTGS.toString()+"\n"+Client.packetToBinary(packetToTGS);
-            socket.getOutputStream().write(message.getBytes("UTF-8"));
-
+            messageSendUnencrypted = packetToTGS.getHead().headOutput() + packetToTGS.packageOutput();
+            System.out.println("发送给TGS的报文内容："+messageSendUnencrypted);
+            System.out.println("发送给TGS的包"+packetToTGS.toString());
+            socket.getOutputStream().write(messageSendUnencrypted.getBytes("UTF-8"));
 
 
             socket.shutdownOutput();
@@ -132,23 +186,33 @@ public class Connection {
             InputStream inputStream = socket.getInputStream();
             byte[] bytes = new byte[1024];
             int len;
-            StringBuilder sb = new StringBuilder();
+            StringBuilder stringBuilder = new StringBuilder();
             while ((len = inputStream.read(bytes)) != -1) {
                 //注意指定编码格式，发送方和接收方一定要统一，建议使用UTF-8
-                sb.append(new String(bytes, 0, len,"UTF-8"));
+                stringBuilder.append(new String(bytes, 0, len, "UTF-8"));
             }
-            System.out.println("get message from server: " + sb);
+            System.out.println("从TGS收到的内容为: " + stringBuilder);
+            packetFromTGS = packetAnalyse(stringBuilder.toString());
 
             inputStream.close();
             outputStream.close();
             socket.close();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return  true;
+        return packetFromTGS;
     }
 
-    public  static boolean connectToServer(String message,Packet packetFromTGS){
+    public  static Packet connectToServer(Packet packetFromTGS ){
+        Packet packetFromServer = new Packet();
+        InetAddress address = null;
+        try {
+            address = InetAddress.getLocalHost();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        String clientIP = address.getHostAddress();
         try {
             // 要连接的服务端IP地址和端口
             String host = ServerIP;
@@ -160,11 +224,11 @@ public class Connection {
             OutputStream outputStream = socket.getOutputStream();
 
             //String clientID,DataStruct.Ticket ticketServer, DataStruct.Authenticator authServer
-            Packet packetToServer = clientToServer(clientID, packetFromTGS.getTicket(),Client.generateAuth(clientID,clientIP,packetFromTGS.getSessionKey()));
+            Packet packetToServer = clientToServer(clientID, packetFromTGS.getTicket(),Client.generateAuth(clientID, ipToBinary(address), packetFromTGS.getSessionKey()));
             //String message = packetToAS.toString()+"\n"+Client.packetToBinary(packetToAS);
-            message =Client.packetToBinary(packetToServer);
-            socket.getOutputStream().write(message.getBytes("UTF-8"));
-
+            messageSendUnencrypted =packetToServer.getHead().headOutput()+packetToServer.packageOutput();
+            socket.getOutputStream().write(messageSendUnencrypted.getBytes("UTF-8"));
+            System.out.println("向sever发的包和message是："+packetToServer.toString()+"message"+messageSendUnencrypted);
             //通过shutdownOutput高速服务器已经发送完数据，后续只能接受数据
             socket.shutdownOutput();
 
@@ -179,8 +243,11 @@ public class Connection {
                 //注意指定编码格式，发送方和接收方一定要统一，建议使用UTF-8
                 sb.append(new String(bytes, 0, len,"UTF-8"));
             }
-            System.out.println("get message from server: " + sb);  // 这里后期要改成显示在客户端上
+            System.out.println("从server中获取的包为: " + sb);  // 这里后期要改成显示在客户端上
 
+            messageReceiveDecrypted = sb.toString();
+            packetFromServer = packetAnalyse(messageReceiveDecrypted);
+            //packetFromServer = packetAnalyse(messageReceiveDecrypted);
             // tostring方法用来展示在屏幕上
             //发送的包是 packetToBinary
 
@@ -190,7 +257,7 @@ public class Connection {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return true;
+        return packetFromServer;
     }
 }
 
