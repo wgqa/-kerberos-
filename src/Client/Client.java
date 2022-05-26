@@ -17,8 +17,8 @@ import java.util.Date;
 public class Client {
     public final static String clientID = "clid";
     public final static  String clientIP = "192.168.43.174";
-    private final static String ASID = "asid";
-    public final static String TGSID = "tgid"; //因为connection中要用，所以改成public
+    private final static String ASID = "0001";
+    public final static String TGSID = "0010"; //因为connection中要用，所以改成public
     public final static String SERVERID = "0011";
     private final String SeverID = "0011";
     public static InetAddress  localAdress = null;
@@ -34,6 +34,32 @@ public class Client {
     public static String ASIP ="192.168.43.233";
     public static String TGSIP ="192.168.43.140";
     public static String ServerIP = "192.168.43.140";
+
+
+
+    public static String StringToBinary(String string)
+    {
+        char M[] = string.toCharArray();
+        //System.out.println(""+M[0]+M[1]+M[2]+M[3]+"-"+M[4]+M[5]+"-"+M[6]+M[7]+" "+M[8]+M[9]+":"+M[10]+M[11]+":"+M[12]+M[13]);
+        int M1[] = new int[M.length];
+        String tmp = new String();
+
+        String s ="";  //进行二进制的累加
+        for(int i=0;i<M.length;i++)
+        {
+            if (Character.isDigit(M[i])){  // 判断是否是数字
+                M1[i] = Integer.parseInt(String.valueOf(M[i]));
+            }
+            else {
+                System.err.println("String转Binary出错，并不是数字");
+            }
+
+            tmp = supplement(4, Integer.toBinaryString(M1[i]));
+            //每一位都转成了二进制
+            s = s + tmp; //加入string中
+        }
+        return s;
+    }
 //Packet{head=Head{destID='tgid', sourceID='clid', existLogin='0', existSessionKey='0', existClientID='0', existRequstID='1', existTS='0', existLifeTime='0', existTicket='1', existAuthenticator='1', securityCode='00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000', expend='0000000010000100'}, sessionKey='', clientID='', requestID='0011', timeStamp='', lifeTime='', Ticket=Ticket{sessionKey='1100011110111010011001101000011100000100010001001011110110000001', ID='wqre', IP='11000000101010000101001100000001', requestID='tgid', timeStamp='20220523143426', lifeTime='20220523143426'}, Auth=Authenticator{clientID='clid', clientIP='11000000101010000011100000000001', timeStamp='20220523143219'}}
     //email 在WELCOME中进行的操作，我是放在connnection中进行的
     public static String BinaryToString(String string)
@@ -62,9 +88,9 @@ public class Client {
     }
     public static DataStruct.Authenticator generateAuth(String ID,String IP,String k){
 
-        String timestamp = DataStruct.Packet.createTimestamp();
-        DataStruct.Authenticator a= new Authenticator(ID,IP,timestamp);
-        System.out.println(a);
+        //String timestamp = DataStruct.Packet.createTimestamp();//这里为什么会错
+        DataStruct.Authenticator a= new Authenticator(ID,IP,StringToBinary(DataStruct.Packet.createTimestamp()));
+        System.out.println("auth的内容"+a);
         //String cipher = Des.DES.encrypt(a.AuthOutput(), k);
         //加密后放入a中
 //        a.setClientID("");
@@ -126,7 +152,7 @@ public class Client {
         p.setHead(h);
         p.setclientID(clientID);
         p.setRequestID(TGSID);
-        p.setTimeStamp(DataStruct.Packet.createTimestamp());
+        p.setTimeStamp(StringToBinary(DataStruct.Packet.createTimestamp()));
 
         //写在packet中吧
         //SimpleDateFormat date = new SimpleDateFormat("yyyyMMddHHmmss");//自定义时间戳格式，时间戳要只包含数字不包含符号
@@ -173,7 +199,7 @@ public class Client {
         p.setAuth(authServer);      //CS_SK加密 包括ID IP timestamp ST有效时间   auth从tgs中解析的包的中获取
         //Client.generateAuth(p3.getHead().getDestID(),clientIP,p3.getSessionKey())
         //p.setTimeStamp(p.createTimestamp());
-        p.setTimeStamp(DataStruct.Packet.createTimestamp());
+        p.setTimeStamp(StringToBinary(DataStruct.Packet.createTimestamp()));
 
 
 
@@ -212,9 +238,11 @@ public class Client {
         }
 
         //System.out.println("p解析了头"+p.toString());
+        System.out.println("message的长度"+message.length());
         System.out.println("空指针在那？");
         System.out.println("head的内容是："+p.getHead().toString());
         String pack = message.replaceFirst(p.getHead().headOutput(), "");
+        System.out.println("pack的内容是"+pack);
         //System.out.println("pack"+pack); //对的
         //通过MD5验证是否被修改
             if(p.getHead().equals(null)){
@@ -223,7 +251,9 @@ public class Client {
             if(p.getHead().getExistLifeTime().equals("1")&&p.getHead().getExistTicket().equals("1")) {
                 //说明是AS发的
                 //package解密 用client私钥
-                String m = message.replaceFirst(p.getHead().headOutput(),"");
+                //String m = message.replaceFirst(p.getHead().headOutput(),"");
+                System.out.println("pack长度"+pack.length());
+                //System.out.println("m的长度"+m.length());
                 //包去掉了头
 
 
@@ -244,9 +274,9 @@ public class Client {
                 //System.out.println(p.getHead().getExpend());
                 //错System.out.println(BinaryToString(p.getHead().getExpend()));
                 int tic = Integer.parseInt(p.getHead().getExpend(),2);//获取拓展位的内容 AS发的拓展位是？发的是ticket的长度
-                //System.out.println("tic长度"+tic);
+                //System.out.println("tic长度"+tic); √
                 DataStruct.Ticket ticket = new Ticket();
-                for(int i = 0;i<m.length();i++)
+                for(int i = 0;i<pack.length();i++)
                 {	//68（64packet的sessionkey+4位requestID)+56+56 + 64 +
                     if(i<64)  //分位段解析内容  AS发的包有64位的sessionkey
                         p.setSessionKey(p.getSessionKey()+C[i]);//可以去掉get，因为本来就是空的
@@ -254,25 +284,29 @@ public class Client {
                         p.setclientID(p.getclientID()+C[i]);
                     else if(i<64+4+4) //四位requestID
                         p.setRequestID(p.getRequestID()+C[i]);
-                    else if(i<68+4+14)//56位timestamp
+                    else if(i<64+4+4+56)//56位timestamp
                         p.setTimeStamp(p.getTimeStamp()+C[i]);
-                    else if(i<68+4+14+14)//56位的lifetime
+                    else if(i<64+4+4+56+56){//56位的lifetime
                         p.setLifeTime(p.getLifeTime()+C[i]);
-                    else if(i<68+4+14+14+tic+1){//ticket部分
-                        if(i<68+4+14+14+64)  //ticket部分首先是64位的sessionkey
+                        //System.out.println("这里的i是？"+i);
+                    }
+                    else if(i<64+4+4+56+56+tic+2){//ticket部分
+                        //System.out.println("zhelide id"+ i);
+                        if(i<68+4+56+56+64)  //ticket部分首先是64位的sessionkey
                             ticket.setSessionKey(ticket.getSessionKey()+C[i]);
-                        else if(i<68+4+14+14+64+4)//ticket中的id
+                        else if(i<68+4+56+56+64+4)//ticket中的id
                             ticket.setID(ticket.getID()+C[i]);
-                        else if(i<68+4+14+14+64+4+32) //32位IP
+                        else if(i<68+4+56+56+64+4+32) //32位IP
                             ticket.setIP(ticket.getIP()+C[i]);
-                        else if(i<68+4+14+14+64+4+32+4) //
+                        else if(i<68+4+56+56+64+4+32+4) //
                             ticket.setRequestID(ticket.getRequestID()+C[i]);
-                        else if(i<68+4+14+14+64+4+32+4+14)
+                        else if(i<68+4+56+56+64+4+32+4+56)
                             ticket.setTimeStamp(ticket.getTimeStamp()+C[i]);
                         else
                             ticket.setLifeTime(ticket.getLifeTime()+C[i]);
                     }
                     else {
+                        System.out.println("这里的i是多少？xja"+i);
                         System.out.println("报错时解析了多少"+p.toString());
                         System.err.println("分析发现AS发过来的package长度有误，请检查！！");
                         System.exit(0);
@@ -315,18 +349,18 @@ public class Client {
                 {	//68（64packet的sessionkey+4位requestID)+56+56 + 64 +
                     if(i<64)  //分位段解析内容  AS发的包有64位的sessionkey
                         p.setSessionKey(p.getSessionKey()+C[i]);//可以去掉get，因为本来就是空的
-                    else if(i<64+14)//56位timestamp
+                    else if(i<64+56)//56位timestamp
                         p.setTimeStamp(p.getTimeStamp()+C[i]);
-                    else if(i<64+14+tic+1){//ticket部分
-                        if(i<64+14+64)  //ticket部分首先是64位的sessionkey
+                    else if(i<64+56+tic+1){//ticket部分
+                        if(i<64+56+64)  //ticket部分首先是64位的sessionkey
                             ticket.setSessionKey(ticket.getSessionKey()+C[i]);
-                        else if(i<64+14+64+4)//ticket中的id
+                        else if(i<64+56+64+4)//ticket中的id
                             ticket.setID(ticket.getID()+C[i]);
-                        else if(i<64+14+64+4+32) //32位IP
+                        else if(i<64+56+64+4+32) //32位IP
                             ticket.setIP(ticket.getIP()+C[i]);
-                        else if(i<64+14+64+4+32+4) //
+                        else if(i<64+56+64+4+32+4) //
                             ticket.setRequestID(ticket.getRequestID()+C[i]);
-                        else if(i<64+14+64+4+32+4+14)
+                        else if(i<64+56+64+4+32+4+56)
                             ticket.setTimeStamp(ticket.getTimeStamp()+C[i]);
                         else
                             ticket.setLifeTime(ticket.getLifeTime()+C[i]);
@@ -369,27 +403,7 @@ public class Client {
         return str;
     }
 
-    public static String StringToBinary(String string)//需要自己修改
-    {
-        int length = string.length();
-        char M[] = string.toCharArray();
-        //System.out.println(""+M[0]+M[1]+M[2]+M[3]+"-"+M[4]+M[5]+"-"+M[6]+M[7]+" "+M[8]+M[9]+":"+M[10]+M[11]+":"+M[12]+M[13]);
-        int M1[] = new int[M.length];
-        String tmp = new String();
 
-        String s ="";  //进行二进制的累加
-        for(int i=0;i<M.length;i++)
-        {
-            M1[i] = M[i]-'\0'; //每一位都是int了，现在开始转换二进制
-
-            tmp = supplement(8, Integer.toBinaryString(M1[i]));
-
-
-            //每一位都转成了二进制
-            s = s + tmp; //加入string中
-        }
-        return s;
-    }
 
 //    public static String packetToBinary(DataStruct.Packet p)
 //    {

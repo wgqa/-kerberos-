@@ -58,6 +58,8 @@ public class Packet {
         return sessionKey + clientID + requestID + timeStamp + lifeTime + Ticket.ticketOutput() + Auth.AuthOutput();
     }
 
+
+
     public static String createTimestamp(){  //加不加static的区别是：
         SimpleDateFormat date = new SimpleDateFormat("yyyyMMddHHmmss");//自定义时间戳格式，时间戳要只包含数字不包含符号
         return(date.format(new Date()));

@@ -173,7 +173,7 @@ public class Connection {
             OutputStream outputStream = socket.getOutputStream();
 
             System.out.println("从AS中获取的ticket为"+packetFromAS.getTicket().toString());
-            Packet packetToTGS = clientToTGS(clientID, "SERV", packetFromAS.getTicket(), Client.generateAuth(clientID, ipToBinary(address), packetFromAS.getSessionKey()));
+            Packet packetToTGS = clientToTGS(packetFromAS.getclientID(), "SERV", packetFromAS.getTicket(), Client.generateAuth(packetFromAS.getclientID(), ipToBinary(address), packetFromAS.getSessionKey()));
 
             messageSendUnencrypted = packetToTGS.getHead().headOutput() + packetToTGS.packageOutput();
             System.out.println("发送给TGS的报文内容："+messageSendUnencrypted);
@@ -204,7 +204,7 @@ public class Connection {
         return packetFromTGS;
     }
 
-    public  static Packet connectToServer(Packet packetFromTGS ){
+    public  static Packet connectToServer(Packet packetFromTGS,Packet packetFromAS){
         Packet packetFromServer = new Packet();
         InetAddress address = null;
         try {
@@ -222,9 +222,9 @@ public class Connection {
             // Socket socket = new Socket(host, port);
             // 建立连接后获得输出流
             OutputStream outputStream = socket.getOutputStream();
-
+            //因为从TGS中获取的包里没有clietID
             //String clientID,DataStruct.Ticket ticketServer, DataStruct.Authenticator authServer
-            Packet packetToServer = clientToServer(clientID, packetFromTGS.getTicket(),Client.generateAuth(clientID, ipToBinary(address), packetFromTGS.getSessionKey()));
+            Packet packetToServer = clientToServer(packetFromAS.getclientID(), packetFromTGS.getTicket(),Client.generateAuth(clientID, ipToBinary(address), packetFromTGS.getSessionKey()));
             //String message = packetToAS.toString()+"\n"+Client.packetToBinary(packetToAS);
             messageSendUnencrypted =packetToServer.getHead().headOutput()+packetToServer.packageOutput();
             socket.getOutputStream().write(messageSendUnencrypted.getBytes("UTF-8"));

@@ -131,7 +131,7 @@ public class MainWindow extends JFrame {
                     messageOnScreen.append("\n未解密的接收包"+messageReceiveEncrypted);
                     messageOnScreen.append("\n解密后的接收包"+messageReceiveDecrypted);
                     System.out.println("在ui里，packetFromTGS为"+packetFromTGS.toString());
-                    packetFromServer = connectToServer(packetFromTGS);
+                    packetFromServer = connectToServer(packetFromTGS,packetFromAS);
                     messageOnScreen.append("\n成功连接到Server");
                     messageOnScreen.append("\n未加密的发送包"+messageSendUnencrypted);
                     messageOnScreen.append("\n加密的发送包"+messageSendEncrypted);
